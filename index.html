@@ -82,6 +82,7 @@
             box-shadow: 0 4px 6px var(--shadow-color);
             backdrop-filter: blur(4px);
             user-select: none;
+            transition: all 0.3s ease;
          }
 
          #map-toolbar {
@@ -100,6 +101,21 @@
             box-shadow: 0 4px 6px var(--shadow-color);
             backdrop-filter: blur(4px);
             user-select: none;
+         }
+
+         #icon-size-slider {
+            width: 0;
+            opacity: 0;
+            margin-left: -15px;
+            pointer-events: none;
+            transition: width 0.3s ease, opacity 0.3s ease, margin-left 0.3s ease;
+         }
+
+         #icon-size-slider.show {
+            width: 100px;
+            opacity: 1;
+            margin-left: 0;
+            pointer-events: auto;
          }
 
          .tile-wrapper {
@@ -253,6 +269,14 @@
             image-rendering: pixelated;
          }
 
+         #torus-grid.current-map-ow .map-fc {
+            display: none;
+         }
+
+         #torus-grid.current-map-fc .map-ow {
+            display: none;
+         }
+
          #github-link {
             position: absolute;
             top: 20px;
@@ -305,7 +329,7 @@
       </style>
    </head>
    <body>
-      <div id="torus-grid">
+      <div id="torus-grid" class="current-map-ow">
          <div id="hover-box"></div>
       </div>
 
@@ -323,10 +347,14 @@
          <button id="toggle-coords-btn" class="tool-btn active" title="Toggle Coordinates">&#128065;</button>
          <button id="toggle-minor-btn" class="tool-btn active" title="Toggle Minor Grid">&#8862;</button>
          <button id="toggle-major-btn" class="tool-btn active" title="Toggle Major Grid">&#9723;</button>
+         <button id="resize-btn" class="tool-btn" title="Resize Icons">&#128207;</button>
+         <input type="range" id="icon-size-slider" min="16" max="128" step="1" value="32">
       </div>
 
       <div id="map-toolbar">
          <button id="toggle-map-btn" class="tool-btn active" title="Toggle Map Version (OW/FC)">OW</button>
+         <button id="import-btn" class="tool-btn active" title="Import Objects (JSON)">&#128449;</button>
+         <button id="export-btn" class="tool-btn active" title="Export Objects (JSON)">&#128427;</button>
       </div>
 
       <div id="object-menu"></div>
@@ -341,7 +369,7 @@
          const totalH = tileH * rows;
          const subTileW = tileW / 30;
          const subTileH = tileH / 17;
-         const iconSize = 32;
+         let iconSize = 32;
 
          const container = document.getElementById("torus-grid");
          const objectMenu = document.getElementById("object-menu");
@@ -349,7 +377,9 @@
          const topToolbar = document.getElementById("top-toolbar");
 
          const objectTypes = [
-            { id: "salavia", name: "Salavia", image: "images/objects/salavia.png" }
+            { id: "salavia", name: "Salavia", image: "images/objects/salavia.png" },
+            { id: "admin", name: "Admin", image: "images/objects/admin.png" },
+            { id: "kapalike", name: "Kapalike", image: "images/objects/kapalike.png" }
          ];
 
          let placedObjects = JSON.parse(localStorage.getItem("placedObjects")) || [];
@@ -361,15 +391,17 @@
             if (objType) el.src = objType.image;
             el.classList.add("placed-object");
             el.classList.add(`object-${objData.objectId}`);
+            el.classList.add(`map-${objData.mapType || "ow"}`);
             el.style.width = `${iconSize}px`;
             el.style.height = `${iconSize}px`;
             container.appendChild(el);
             objectElements.push({ data: objData, el: el });
          };
 
-         const removeObjectAt = (mapX, mapY, tileX, tileY) => {
+         const removeObjectAt = (mapX, mapY, tileX, tileY, mapType) => {
             placedObjects = placedObjects.filter((o) => {
-               if (o.mapX === mapX && o.mapY === mapY && o.tileX === tileX && o.tileY === tileY) {
+               const objMapType = o.mapType || "ow";
+               if (o.mapX === mapX && o.mapY === mapY && o.tileX === tileX && o.tileY === tileY && objMapType === mapType) {
                   const objElIndex = objectElements.findIndex((oe) => oe.data === o);
                   if (objElIndex !== -1) {
                      const elToRemove = objectElements[objElIndex].el;
@@ -425,16 +457,17 @@
 
             btn.addEventListener("click", () => {
                if (currentClickLocation) {
-                  const { mapX, mapY, tileX, tileY } = currentClickLocation;
+                  const { mapX, mapY, tileX, tileY, mapType } = currentClickLocation;
 
-                  removeObjectAt(mapX, mapY, tileX, tileY);
+                  removeObjectAt(mapX, mapY, tileX, tileY, mapType);
 
                   const newObj = {
                      mapX,
                      mapY,
                      tileX,
                      tileY,
-                     objectId: obj.id
+                     objectId: obj.id,
+                     mapType
                   };
                   placedObjects.push(newObj);
                   localStorage.setItem("placedObjects", JSON.stringify(placedObjects));
@@ -456,8 +489,8 @@
 
          removeBtn.addEventListener("click", () => {
             if (currentClickLocation) {
-               const { mapX, mapY, tileX, tileY } = currentClickLocation;
-               removeObjectAt(mapX, mapY, tileX, tileY);
+               const { mapX, mapY, tileX, tileY, mapType } = currentClickLocation;
+               removeObjectAt(mapX, mapY, tileX, tileY, mapType);
                localStorage.setItem("placedObjects", JSON.stringify(placedObjects));
             }
             objectMenu.style.display = "none";
@@ -569,11 +602,87 @@
 
          const toggleMapBtn = document.getElementById("toggle-map-btn");
          toggleMapBtn.addEventListener("click", () => {
+            container.classList.remove(`current-map-${currentMap}`);
             currentMap = currentMap === "ow" ? "fc" : "ow";
+            container.classList.add(`current-map-${currentMap}`);
             toggleMapBtn.innerText = currentMap.toUpperCase();
             tiles.forEach((tile) => {
                tile.img.src = `images/${currentMap}/${currentMap}_${tile.r + 1}-${tile.c + 1}.png`;
             });
+         });
+
+         const importBtn = document.getElementById("import-btn");
+         importBtn.addEventListener("click", () => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".json";
+            input.onchange = (e) => {
+               const file = e.target.files[0];
+               if (!file) return;
+               const reader = new FileReader();
+               reader.onload = (readerEvent) => {
+                  try {
+                     const parsed = JSON.parse(readerEvent.target.result);
+                     if (Array.isArray(parsed)) {
+                        let objectsAdded = false;
+
+                        parsed.forEach((importedObj) => {
+                           const impMapType = importedObj.mapType || "ow";
+                           const conflict = placedObjects.some(
+                              (o) => o.mapX === importedObj.mapX && o.mapY === importedObj.mapY && o.tileX === importedObj.tileX && o.tileY === importedObj.tileY && (o.mapType || "ow") === impMapType
+                           );
+
+                           if (!conflict) {
+                              placedObjects.push(importedObj);
+                              createObjectElement(importedObj);
+                              objectsAdded = true;
+                           }
+                        });
+
+                        if (objectsAdded) {
+                           localStorage.setItem("placedObjects", JSON.stringify(placedObjects));
+                           updatePlacedObjects();
+                        }
+                     } else {
+                        alert("Invalid file format. Expected a JSON array.");
+                     }
+                  } catch (err) {
+                     alert("Error parsing JSON file.");
+                  }
+               };
+               reader.readAsText(file);
+            };
+            input.click();
+         });
+
+         const exportBtn = document.getElementById("export-btn");
+         exportBtn.addEventListener("click", () => {
+            const blob = new Blob([JSON.stringify(placedObjects, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchorNode = document.createElement("a");
+            downloadAnchorNode.href = url;
+            downloadAnchorNode.download = "emuurom-map-objects.json";
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            URL.revokeObjectURL(url);
+         });
+
+         const resizeBtn = document.getElementById("resize-btn");
+         const iconSizeSlider = document.getElementById("icon-size-slider");
+
+         resizeBtn.addEventListener("click", () => {
+            resizeBtn.classList.toggle("active");
+            iconSizeSlider.classList.toggle("show");
+         });
+
+         iconSizeSlider.addEventListener("input", (e) => {
+            iconSize = parseInt(e.target.value, 10);
+            objectElements.forEach((obj) => {
+               obj.el.style.width = `${iconSize}px`;
+               obj.el.style.height = `${iconSize}px`;
+            });
+            updatePlacedObjects();
          });
 
          const updatePositions = () => {
@@ -739,11 +848,11 @@
 
             const { mapX, mapY, tileX, tileY } = getWorldToGridCoords(worldX, worldY);
 
-            console.log(`Map Clicked -> mapX: ${mapX}, mapY: ${mapY}, tileX: ${tileX}, tileY: ${tileY}`);
-            currentClickLocation = { mapX, mapY, tileX, tileY };
+            console.log(`Map Clicked -> mapX: ${mapX}, mapY: ${mapY}, tileX: ${tileX}, tileY: ${tileY}, mapType: ${currentMap}`);
+            currentClickLocation = { mapX, mapY, tileX, tileY, mapType: currentMap };
 
             const hasExistingObject = placedObjects.some(
-               (o) => o.mapX === mapX && o.mapY === mapY && o.tileX === tileX && o.tileY === tileY
+               (o) => o.mapX === mapX && o.mapY === mapY && o.tileX === tileX && o.tileY === tileY && (o.mapType || "ow") === currentMap
             );
             removeBtn.style.display = hasExistingObject ? "flex" : "none";
 
