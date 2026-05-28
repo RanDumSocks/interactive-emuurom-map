@@ -350,11 +350,12 @@
          <button id="resize-btn" class="tool-btn" title="Resize Icons">&#128207;</button>
          <input type="range" id="icon-size-slider" min="16" max="128" step="1" value="32">
       </div>
-
+      
       <div id="map-toolbar">
          <button id="toggle-map-btn" class="tool-btn active" title="Toggle Map Version (OW/FC)">OW</button>
          <button id="import-btn" class="tool-btn active" title="Import Objects (JSON)">&#128449;</button>
          <button id="export-btn" class="tool-btn active" title="Export Objects (JSON)">&#128427;</button>
+         <button id="clear-all-btn" class="tool-btn" title="Clear All Objects">&#128465;</button>
       </div>
 
       <div id="object-menu"></div>
@@ -597,6 +598,18 @@
                container.classList.remove("hide-major-grid");
             } else {
                container.classList.add("hide-major-grid");
+            }
+         });
+
+         const clearAllBtn = document.getElementById("clear-all-btn");
+         clearAllBtn.addEventListener("click", () => {
+            if (confirm("Are you sure you want to remove all placed map markers? This action cannot be undone.")) {
+               placedObjects = [];
+               localStorage.removeItem("placedObjects");
+               objectElements.forEach((obj) => {
+                  if (obj.el.parentNode) obj.el.parentNode.removeChild(obj.el);
+               });
+               objectElements.length = 0;
             }
          });
 
