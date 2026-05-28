@@ -36,6 +36,8 @@
             overflow: hidden;
             background-color: var(--bg-color);
             font-family: sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
          }
 
          #torus-grid {
@@ -46,11 +48,102 @@
             touch-action: none;
          }
 
-         #top-toolbar {
+         #torus-grid.cursor-pan {
+            cursor: grab;
+         }
+
+         #torus-grid.cursor-pan-active {
+            cursor: grabbing;
+         }
+
+         #torus-grid.cursor-pencil {
+            cursor: crosshair;
+         }
+
+         #torus-grid.cursor-erase {
+            cursor: cell;
+         }
+
+         #top-toolbar-container {
             position: absolute;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+         }
+
+         #right-toolbar-container {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 100;
+         }
+
+         #paint-btn-container {
+            padding: 10px;
+         }
+
+         #paint-menu,
+         #paint-controls-menu,
+         #paint-actions-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            max-height: 0;
+            padding: 0 10px;
+            margin-top: 0;
+            opacity: 0;
+            transform: translateX(100px);
+            overflow: hidden;
+            transition: max-height 0.3s ease, margin-top 0.3s ease, transform 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+         }
+
+         #paint-menu.show,
+         #paint-controls-menu.show,
+         #paint-actions-menu.show {
+            max-height: 200px;
+            padding: 10px;
+            margin-top: 15px;
+            opacity: 1;
+            transform: translateX(0);
+         }
+
+         #tile-selection-menu {
+            position: absolute;
+            right: 100%;
+            margin-right: 15px;
+            display: flex;
+            gap: 10px;
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            padding: 10px;
+            opacity: 0;
+            transform: translateX(20px);
+            pointer-events: none;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+         }
+
+         #tile-selection-menu.show {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+         }
+
+         .toolbar-panel {
             background-color: var(--toolbar-bg);
             border: 1px solid var(--border-subtle);
             color: var(--text-color);
@@ -59,7 +152,6 @@
             display: flex;
             gap: 15px;
             align-items: center;
-            z-index: 100;
             box-shadow: 0 4px 6px var(--shadow-color);
             backdrop-filter: blur(4px);
             user-select: none;
@@ -269,12 +361,31 @@
             image-rendering: pixelated;
          }
 
+         .placed-tile {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 40;
+            image-rendering: pixelated;
+            transform-origin: top left;
+         }
+
+         #torus-grid.hide-all-tiles:not(.paint-mode-active) .placed-tile {
+            display: none;
+         }
+
          #torus-grid.current-map-ow .map-fc {
             display: none;
          }
 
          #torus-grid.current-map-fc .map-ow {
             display: none;
+         }
+
+         #hover-box.paint-preview {
+            border: none;
+            background-color: transparent;
+            backdrop-filter: none;
          }
 
          #github-link {
@@ -341,7 +452,17 @@
 
       <div id="copyright-info">&copy; Justin Chance | AGPLv3</div>
 
-      <div id="top-toolbar"></div>
+      <div id="top-toolbar-container">
+         <div id="top-toolbar" class="toolbar-panel"></div>
+         <div id="top-tiles-toolbar" class="toolbar-panel">
+            <button id="toggle-tiles-btn" class="tool-btn active" title="Toggle All Tiles"></button>
+         </div>
+         <div id="top-actions-toolbar" class="toolbar-panel">
+            <button id="import-btn" class="tool-btn active" title="Import Objects (JSON)">&#128449;</button>
+            <button id="export-btn" class="tool-btn active" title="Export Objects (JSON)">&#128427;</button>
+            <button id="clear-all-btn" class="tool-btn" title="Clear All Objects">&#128465;</button>
+         </div>
+      </div>
 
       <div id="toolbar">
          <button id="toggle-coords-btn" class="tool-btn active" title="Toggle Coordinates">&#128065;</button>
@@ -353,12 +474,27 @@
       
       <div id="map-toolbar">
          <button id="toggle-map-btn" class="tool-btn active" title="Toggle Map Version (OW/FC)">OW</button>
-         <button id="import-btn" class="tool-btn active" title="Import Objects (JSON)">&#128449;</button>
-         <button id="export-btn" class="tool-btn active" title="Export Objects (JSON)">&#128427;</button>
-         <button id="clear-all-btn" class="tool-btn" title="Clear All Objects">&#128465;</button>
       </div>
 
       <div id="object-menu"></div>
+
+      <div id="right-toolbar-container">
+         <div id="paint-btn-container" class="toolbar-panel">
+            <button id="paint-mode-btn" class="tool-btn" title="Toggle Paint Mode">&#128396;</button>
+         </div>
+         <div id="paint-menu"></div>
+         <div id="paint-controls-menu">
+            <button id="pan-btn" class="tool-btn active" title="Pan Tool">&#9995;</button>
+            <button id="pencil-btn" class="tool-btn" title="Pencil Tool">&#9998;</button>
+            <button id="erase-btn" class="tool-btn" title="Erase Tool">&#9003;</button>
+         </div>
+         <div id="paint-actions-menu">
+            <button id="import-tiles-btn" class="tool-btn active" title="Import Tiles (JSON)">&#128449;</button>
+            <button id="export-tiles-btn" class="tool-btn active" title="Export Tiles (JSON)">&#128427;</button>
+            <button id="clear-tiles-btn" class="tool-btn" title="Clear All Tiles">&#128465;</button>
+         </div>
+         <div id="tile-selection-menu"></div>
+      </div>
 
       <script>
          // Base map dimensions and grid configurations
@@ -376,6 +512,14 @@
          const objectMenu = document.getElementById("object-menu");
          const hoverBox = document.getElementById("hover-box");
          const topToolbar = document.getElementById("top-toolbar");
+         const paintModeBtn = document.getElementById("paint-mode-btn");
+         const paintMenu = document.getElementById("paint-menu");
+         const tileSelectionMenu = document.getElementById("tile-selection-menu");
+         const paintControlsMenu = document.getElementById("paint-controls-menu");
+         const paintActionsMenu = document.getElementById("paint-actions-menu");
+         const panBtn = document.getElementById("pan-btn");
+         const pencilBtn = document.getElementById("pencil-btn");
+         const eraseBtn = document.getElementById("erase-btn");
 
          const objectTypes = [
             { id: "salavia", name: "Salavia", image: "images/objects/salavia.png" },
@@ -383,8 +527,30 @@
             { id: "kapalike", name: "Kapalike", image: "images/objects/kapalike.png" }
          ];
 
+         const tileTypes = [
+            { id: "solid-block", name: "Solid Block", image: "images/objects/solid-block.png" },
+            { id: "platform", name: "Platform", image: "images/objects/platform.png" }
+         ];
+
          let placedObjects = JSON.parse(localStorage.getItem("placedObjects")) || [];
          const objectElements = [];
+
+         let paintedTiles = JSON.parse(localStorage.getItem("paintedTiles")) || [];
+         const paintedTileElements = [];
+
+         const createPaintedTileElement = (tileData) => {
+            const el = document.createElement("img");
+            const tType = tileTypes.find((t) => t.id === tileData.objectId);
+            if (tType) el.src = tType.image;
+            el.classList.add("placed-tile");
+            el.classList.add(`tile-${tileData.objectId}`);
+            el.classList.add(`map-${tileData.mapType || "ow"}`);
+            el.style.width = `${subTileW}px`;
+            el.style.height = `${subTileH}px`;
+            el.draggable = false;
+            container.appendChild(el);
+            paintedTileElements.push({ data: tileData, el: el });
+         };
 
          const createObjectElement = (objData) => {
             const el = document.createElement("img");
@@ -395,6 +561,7 @@
             el.classList.add(`map-${objData.mapType || "ow"}`);
             el.style.width = `${iconSize}px`;
             el.style.height = `${iconSize}px`;
+            el.draggable = false;
             container.appendChild(el);
             objectElements.push({ data: objData, el: el });
          };
@@ -443,6 +610,113 @@
 
             topToolbar.appendChild(btn);
          });
+
+         // Build tile visibility toggle button
+         const toggleTilesBtn = document.getElementById("toggle-tiles-btn");
+         const toggleTilesImg = document.createElement("img");
+         toggleTilesImg.src = tileTypes[0].image;
+         toggleTilesBtn.appendChild(toggleTilesImg);
+         
+         toggleTilesBtn.addEventListener("click", () => {
+            toggleTilesBtn.classList.toggle("active");
+            container.classList.toggle("hide-all-tiles");
+         });
+
+         let isPaintMode = false;
+         let selectedPaintTile = tileTypes[0].id;
+
+         let isSpacebarDown = false;
+         let isSpacePanActive = false;
+
+         const updateCursor = () => {
+            container.classList.remove("cursor-pan", "cursor-pan-active", "cursor-pencil", "cursor-erase");
+            const effectiveTool = (isPaintMode && !isSpacePanActive) ? currentPaintTool : "pan";
+            
+            if (effectiveTool === "pan") {
+               container.classList.add(isDragging ? "cursor-pan-active" : "cursor-pan");
+            } else if (effectiveTool === "pencil") {
+               container.classList.add("cursor-pencil");
+            } else if (effectiveTool === "erase") {
+               container.classList.add("cursor-erase");
+            }
+         };
+
+         paintModeBtn.addEventListener("click", () => {
+            isPaintMode = !isPaintMode;
+            paintModeBtn.classList.toggle("active", isPaintMode);
+            paintMenu.classList.toggle("show", isPaintMode);
+            paintControlsMenu.classList.toggle("show", isPaintMode);
+            paintActionsMenu.classList.toggle("show", isPaintMode);
+            if (!isPaintMode) {
+               tileSelectionMenu.classList.remove("show");
+            }
+            container.classList.toggle("paint-mode-active", isPaintMode);
+            updateCursor();
+         });
+
+         const tileSelectBtn = document.createElement("button");
+         tileSelectBtn.classList.add("tool-btn");
+         tileSelectBtn.title = `Selected Tile: ${tileTypes[0].name}`;
+
+         const tileSelectImg = document.createElement("img");
+         tileSelectImg.src = tileTypes[0].image;
+         tileSelectImg.alt = tileTypes[0].name;
+
+         tileSelectBtn.appendChild(tileSelectImg);
+
+         tileSelectBtn.addEventListener("click", () => {
+            const isShowing = tileSelectionMenu.classList.contains("show");
+            if (!isShowing) {
+               tileSelectionMenu.style.top = `${tileSelectBtn.offsetTop + paintMenu.offsetTop - 10}px`;
+            }
+            tileSelectionMenu.classList.toggle("show");
+         });
+
+         paintMenu.appendChild(tileSelectBtn);
+
+         // Build tile selection menu dynamically
+         tileTypes.forEach((tile) => {
+            const btn = document.createElement("button");
+            btn.classList.add("tool-btn");
+            if (tile.id === selectedPaintTile) {
+               btn.classList.add("active");
+            }
+            btn.title = `Select ${tile.name}`;
+
+            const img = document.createElement("img");
+            img.src = tile.image;
+            img.alt = tile.name;
+
+            btn.appendChild(img);
+
+            btn.addEventListener("click", () => {
+               selectedPaintTile = tile.id;
+               tileSelectImg.src = tile.image;
+               tileSelectImg.alt = tile.name;
+               tileSelectBtn.title = `Selected Tile: ${tile.name}`;
+
+               Array.from(tileSelectionMenu.children).forEach((child) => child.classList.remove("active"));
+               btn.classList.add("active");
+
+               tileSelectionMenu.classList.remove("show");
+            });
+
+            tileSelectionMenu.appendChild(btn);
+         });
+
+         let currentPaintTool = "pan";
+
+         const selectPaintTool = (tool) => {
+            currentPaintTool = tool;
+            panBtn.classList.toggle("active", tool === "pan");
+            pencilBtn.classList.toggle("active", tool === "pencil");
+            eraseBtn.classList.toggle("active", tool === "erase");
+            updateCursor();
+         };
+
+         panBtn.addEventListener("click", () => selectPaintTool("pan"));
+         pencilBtn.addEventListener("click", () => selectPaintTool("pencil"));
+         eraseBtn.addEventListener("click", () => selectPaintTool("erase"));
 
          // Build object selection menu
          objectTypes.forEach((obj) => {
@@ -499,11 +773,15 @@
          objectMenu.appendChild(removeBtn);
 
          placedObjects.forEach(createObjectElement);
+         paintedTiles.forEach(createPaintedTileElement);
 
          // Hide object menu when clicking outside
          window.addEventListener("pointerdown", (e) => {
             if (objectMenu.style.display !== "none" && !objectMenu.contains(e.target) && e.button !== 2) {
                objectMenu.style.display = "none";
+            }
+            if (tileSelectionMenu.classList.contains("show") && !tileSelectionMenu.contains(e.target) && !tileSelectBtn.contains(e.target)) {
+               tileSelectionMenu.classList.remove("show");
             }
          });
 
@@ -515,6 +793,60 @@
             return Math.max(minScaleX, minScaleY);
          };
 
+         const addOrReplacePaintedTile = (mapX, mapY, tileX, tileY, mapType, tileId) => {
+            let existingIndex = paintedTiles.findIndex(t => t.mapX === mapX && t.mapY === mapY && t.tileX === tileX && t.tileY === tileY && (t.mapType || "ow") === mapType);
+            
+            if (existingIndex !== -1) {
+               if (paintedTiles[existingIndex].objectId === tileId) return;
+               
+               const elIndex = paintedTileElements.findIndex(pe => pe.data === paintedTiles[existingIndex]);
+               if (elIndex !== -1) {
+                  const elToRemove = paintedTileElements[elIndex].el;
+                  if (elToRemove.parentNode) elToRemove.parentNode.removeChild(elToRemove);
+                  paintedTileElements.splice(elIndex, 1);
+               }
+               paintedTiles.splice(existingIndex, 1);
+            }
+            
+            const newTile = { mapX, mapY, tileX, tileY, objectId: tileId, mapType };
+            paintedTiles.push(newTile);
+            localStorage.setItem("paintedTiles", JSON.stringify(paintedTiles));
+            createPaintedTileElement(newTile);
+            updatePaintedTiles();
+         };
+
+         const removePaintedTileAt = (mapX, mapY, tileX, tileY, mapType) => {
+            let existingIndex = paintedTiles.findIndex(t => t.mapX === mapX && t.mapY === mapY && t.tileX === tileX && t.tileY === tileY && (t.mapType || "ow") === mapType);
+            
+            if (existingIndex !== -1) {
+               const elIndex = paintedTileElements.findIndex(pe => pe.data === paintedTiles[existingIndex]);
+               if (elIndex !== -1) {
+                  const elToRemove = paintedTileElements[elIndex].el;
+                  if (elToRemove.parentNode) elToRemove.parentNode.removeChild(elToRemove);
+                  paintedTileElements.splice(elIndex, 1);
+               }
+               paintedTiles.splice(existingIndex, 1);
+               localStorage.setItem("paintedTiles", JSON.stringify(paintedTiles));
+            }
+         };
+
+         const paintOrEraseAtMouse = (e) => {
+            const rect = container.getBoundingClientRect();
+            const localMouseX = e.clientX - rect.left;
+            const localMouseY = e.clientY - rect.top;
+            
+            const worldX = (localMouseX - currentPanX) / currentScale;
+            const worldY = (localMouseY - currentPanY) / currentScale;
+
+            const { mapX, mapY, tileX, tileY } = getWorldToGridCoords(worldX, worldY);
+            
+            if (currentPaintTool === "pencil") {
+               addOrReplacePaintedTile(mapX, mapY, tileX, tileY, currentMap, selectedPaintTile);
+            } else if (currentPaintTool === "erase") {
+               removePaintedTileAt(mapX, mapY, tileX, tileY, currentMap);
+            }
+         };
+
          let currentPanX = 0,
             currentPanY = 0,
             currentScale = Math.max(1.0, getMinScale());
@@ -524,9 +856,12 @@
          const friction = 0.15;
 
          let isDragging = false;
+         let isPaintingOrErasing = false;
          let startX, startY;
          const tiles = [];
          let currentMap = "ow";
+
+         updateCursor();
 
          // 8x8 grid
          for (let r = 0; r < rows; r++) {
@@ -681,6 +1016,75 @@
             URL.revokeObjectURL(url);
          });
 
+         const importTilesBtn = document.getElementById("import-tiles-btn");
+         importTilesBtn.addEventListener("click", () => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".json";
+            input.onchange = (e) => {
+               const file = e.target.files[0];
+               if (!file) return;
+               const reader = new FileReader();
+               reader.onload = (readerEvent) => {
+                  try {
+                     const parsed = JSON.parse(readerEvent.target.result);
+                     if (Array.isArray(parsed)) {
+                        let tilesAdded = false;
+
+                        parsed.forEach((importedTile) => {
+                           const impMapType = importedTile.mapType || "ow";
+                           const conflict = paintedTiles.some(
+                              (t) => t.mapX === importedTile.mapX && t.mapY === importedTile.mapY && t.tileX === importedTile.tileX && t.tileY === importedTile.tileY && (t.mapType || "ow") === impMapType
+                           );
+
+                           if (!conflict) {
+                              paintedTiles.push(importedTile);
+                              createPaintedTileElement(importedTile);
+                              tilesAdded = true;
+                           }
+                        });
+
+                        if (tilesAdded) {
+                           localStorage.setItem("paintedTiles", JSON.stringify(paintedTiles));
+                           updatePaintedTiles();
+                        }
+                     } else {
+                        alert("Invalid file format. Expected a JSON array.");
+                     }
+                  } catch (err) {
+                     alert("Error parsing JSON file.");
+                  }
+               };
+               reader.readAsText(file);
+            };
+            input.click();
+         });
+
+         const exportTilesBtn = document.getElementById("export-tiles-btn");
+         exportTilesBtn.addEventListener("click", () => {
+            const blob = new Blob([JSON.stringify(paintedTiles, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchorNode = document.createElement("a");
+            downloadAnchorNode.href = url;
+            downloadAnchorNode.download = "emuurom-map-tiles.json";
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            URL.revokeObjectURL(url);
+         });
+
+         const clearTilesBtn = document.getElementById("clear-tiles-btn");
+         clearTilesBtn.addEventListener("click", () => {
+            if (confirm("Are you sure you want to remove all painted tiles? This action cannot be undone.")) {
+               paintedTiles = [];
+               localStorage.removeItem("paintedTiles");
+               paintedTileElements.forEach((tile) => {
+                  if (tile.el.parentNode) tile.el.parentNode.removeChild(tile.el);
+               });
+               paintedTileElements.length = 0;
+            }
+         });
+
          const resizeBtn = document.getElementById("resize-btn");
          const iconSizeSlider = document.getElementById("icon-size-slider");
 
@@ -749,6 +1153,20 @@
                   hoverBox.style.width = `${subTileW * currentScale}px`;
                   hoverBox.style.height = `${subTileH * currentScale}px`;
                   hoverBox.style.transform = `translate(${hoverScreenX}px, ${hoverScreenY}px)`;
+                  
+                  const effectiveTool = (isPaintMode && !isSpacePanActive) ? currentPaintTool : "pan";
+                  if (effectiveTool === "pencil") {
+                     const selectedTileType = tileTypes.find(t => t.id === selectedPaintTile);
+                     if (selectedTileType) {
+                        hoverBox.classList.add("paint-preview");
+                        hoverBox.style.backgroundImage = `url(${selectedTileType.image})`;
+                        hoverBox.style.backgroundSize = '100% 100%';
+                        hoverBox.style.imageRendering = 'pixelated';
+                     }
+                  } else {
+                     hoverBox.classList.remove("paint-preview");
+                     hoverBox.style.backgroundImage = 'none';
+                  }
                }
             } else {
                hoverBox.style.display = "none";
@@ -771,8 +1189,23 @@
             });
          };
 
+         const updatePaintedTiles = () => {
+            paintedTileElements.forEach((tile) => {
+               const mapC = tile.data.mapX - 1;
+               const mapR = tile.data.mapY - 1;
+               const parentTile = tiles[mapR * cols + mapC];
+               if (parentTile && parentTile.currentX !== undefined) {
+                  const screenX = parentTile.currentX + (tile.data.tileX * subTileW) * currentScale;
+                  const screenY = parentTile.currentY + (tile.data.tileY * subTileH) * currentScale;
+
+                  tile.el.style.transform = `translate(${screenX}px, ${screenY}px) scale(${currentScale})`;
+               }
+            });
+         };
+
          updatePositions();
          updatePlacedObjects();
+         updatePaintedTiles();
 
          // Adjust min zoom dynamically if the window is resized
          window.addEventListener("resize", () => {
@@ -798,9 +1231,10 @@
                Math.abs(targetScale - currentScale);
                
             // Only update DOM styles if the map is still moving or being dragged
-            if (diff > 0.005 || isDragging) {
+            if (diff > 0.005 || isDragging || isPaintingOrErasing) {
                updatePositions();
                updatePlacedObjects();
+               updatePaintedTiles();
             }
             
             // Hover box must update continuously to track mouse movement
@@ -814,15 +1248,24 @@
          // Mouse / Pointer Dragging Logic
          container.addEventListener("pointerdown", (e) => {
             if (e.button === 0 || e.button === 1 || e.pointerType === "touch") {
-               isDragging = true;
-               startX = e.clientX;
-               startY = e.clientY;
-               if (e.button === 1) e.preventDefault();
+               const effectiveTool = (isPaintMode && !isSpacePanActive) ? currentPaintTool : "pan";
+               if (e.button === 0 && (effectiveTool === "pencil" || effectiveTool === "erase")) {
+                  isPaintingOrErasing = true;
+                  paintOrEraseAtMouse(e);
+               } else {
+                  isDragging = true;
+                  startX = e.clientX;
+                  startY = e.clientY;
+                  if (e.button === 1) e.preventDefault();
+               }
+               updateCursor();
             }
          });
 
          const stopDrag = () => {
             isDragging = false;
+            isPaintingOrErasing = false;
+            updateCursor();
          };
 
          window.addEventListener("pointerup", stopDrag);
@@ -840,6 +1283,11 @@
             mouseX = e.clientX - rect.left;
             mouseY = e.clientY - rect.top;
             isPointerOver = true;
+
+            if (isPaintingOrErasing) {
+               paintOrEraseAtMouse(e);
+               return;
+            }
 
             if (!isDragging) return;
             e.preventDefault();
@@ -873,6 +1321,35 @@
             objectMenu.style.display = "flex";
             objectMenu.style.left = `${e.clientX}px`;
             objectMenu.style.top = `${e.clientY + 10}px`;
+         });
+
+         window.addEventListener("keydown", (e) => {
+            if (e.code === "Space" && !isSpacebarDown) {
+               isSpacebarDown = true;
+               if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+                  e.preventDefault();
+               }
+               if (isPaintMode) {
+                  isSpacePanActive = true;
+                  updateCursor();
+               }
+            }
+         });
+
+         window.addEventListener("keyup", (e) => {
+            if (e.code === "Space") {
+               isSpacebarDown = false;
+               if (isSpacePanActive) {
+                  isSpacePanActive = false;
+                  updateCursor();
+               }
+            }
+         });
+
+         window.addEventListener("blur", () => {
+            isSpacebarDown = false;
+            isSpacePanActive = false;
+            stopDrag();
          });
 
          // Mouse Wheel Zoom / Panning Logic
