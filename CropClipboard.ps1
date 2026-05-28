@@ -1,4 +1,5 @@
 # USAGE: Take a full 1920x1080 screenshot of the game while it is in fullscreen mode. Run the script and it will save an image file to the current directory.
+# Note: This script is designed for Windows as it relies on .NET Windows Forms and Drawing libraries.
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName Microsoft.VisualBasic
@@ -6,10 +7,14 @@ Add-Type -AssemblyName Microsoft.VisualBasic
 if ([System.Windows.Forms.Clipboard]::ContainsImage()) {
    $srcImg = [System.Windows.Forms.Clipboard]::GetImage()
    
-   $srcRect = New-Object System.Drawing.Rectangle(120, 65, 1680, 950)
-   
+   # Define the crop region to remove UI elements/borders from the 1920x1080 screenshot
+   $cropX = 120
+   $cropY = 65
    $targetWidth = 1680
    $targetHeight = 950
+
+   $srcRect = New-Object System.Drawing.Rectangle($cropX, $cropY, $targetWidth, $targetHeight)
+
    $destRect = New-Object System.Drawing.Rectangle(0, 0, $targetWidth, $targetHeight)
    
    $bmp = New-Object System.Drawing.Bitmap($targetWidth, $targetHeight)

@@ -332,6 +332,7 @@
       <div id="object-menu"></div>
 
       <script>
+         // Base map dimensions and grid configurations
          const tileW = 1680 / 4;
          const tileH = 950 / 4;
          const cols = 8;
@@ -340,7 +341,7 @@
          const totalH = tileH * rows;
          const subTileW = tileW / 30;
          const subTileH = tileH / 17;
-         const iconSize = 32; // Configurable icon size in pixels
+         const iconSize = 32;
 
          const container = document.getElementById("torus-grid");
          const objectMenu = document.getElementById("object-menu");
@@ -375,9 +376,9 @@
                      if (elToRemove.parentNode) elToRemove.parentNode.removeChild(elToRemove);
                      objectElements.splice(objElIndex, 1);
                   }
-                  return false; // Remove from placedObjects
+                  return false;
                }
-               return true; // Keep in placedObjects
+               return true;
             });
          };
 
@@ -385,7 +386,6 @@
          let mouseX = 0, mouseY = 0;
          let isPointerOver = false;
 
-         // Dynamic styles for toggling object visibility
          const dynamicStyles = document.createElement("style");
          document.head.appendChild(dynamicStyles);
 
@@ -427,7 +427,6 @@
                if (currentClickLocation) {
                   const { mapX, mapY, tileX, tileY } = currentClickLocation;
 
-                  // Override existing object(s) at this location
                   removeObjectAt(mapX, mapY, tileX, tileY);
 
                   const newObj = {
@@ -440,6 +439,7 @@
                   placedObjects.push(newObj);
                   localStorage.setItem("placedObjects", JSON.stringify(placedObjects));
                   createObjectElement(newObj);
+                  updatePlacedObjects();
                }
                objectMenu.style.display = "none";
             });
@@ -464,7 +464,6 @@
          });
          objectMenu.appendChild(removeBtn);
 
-         // Initialize already placed objects
          placedObjects.forEach(createObjectElement);
 
          // Hide object menu when clicking outside
@@ -618,7 +617,8 @@
 
                const { mapC, mapR, tileC, tileR } = getWorldToGridCoords(worldX, worldY);
 
-               const parentTile = tiles.find((t) => t.c === mapC && t.r === mapR);
+               // direct lookup for the tile
+               const parentTile = tiles[mapR * cols + mapC];
                if (parentTile && parentTile.currentX !== undefined) {
                   const hoverScreenX = parentTile.currentX + tileC * subTileW * currentScale;
                   const hoverScreenY = parentTile.currentY + tileR * subTileH * currentScale;
@@ -635,9 +635,10 @@
 
          const updatePlacedObjects = () => {
             objectElements.forEach((obj) => {
-               const parentTile = tiles.find((t) => t.c === obj.data.mapX - 1 && t.r === obj.data.mapY - 1);
+               const mapC = obj.data.mapX - 1;
+               const mapR = obj.data.mapY - 1;
+               const parentTile = tiles[mapR * cols + mapC];
                if (parentTile && parentTile.currentX !== undefined) {
-                  // Center the icon exactly in the middle of the scaled tile
                   const localCenterX = (obj.data.tileX * subTileW + subTileW / 2) * currentScale;
                   const localCenterY = (obj.data.tileY * subTileH + subTileH / 2) * currentScale;
                   const screenX = parentTile.currentX + localCenterX - iconSize / 2;
@@ -648,7 +649,6 @@
             });
          };
 
-         // Apply initial layout so tiles aren't stacked in the top-left corner
          updatePositions();
 
          // Adjust min zoom dynamically if the window is resized
@@ -673,11 +673,15 @@
                Math.abs(targetPanX - currentPanX) +
                Math.abs(targetPanY - currentPanY) +
                Math.abs(targetScale - currentScale);
+               
+            // Only update DOM styles if the map is still moving or being dragged
             if (diff > 0.005 || isDragging) {
                updatePositions();
+               updatePlacedObjects();
             }
+            
+            // Hover box must update continuously to track mouse movement
             updateHoverBox();
-            updatePlacedObjects();
 
             requestAnimationFrame(renderLoop);
          };
@@ -686,12 +690,11 @@
 
          // Mouse / Pointer Dragging Logic
          container.addEventListener("pointerdown", (e) => {
-            // Pan on left click (0), middle mouse button (1), or touch
             if (e.button === 0 || e.button === 1 || e.pointerType === "touch") {
                isDragging = true;
                startX = e.clientX;
                startY = e.clientY;
-               if (e.button === 1) e.preventDefault(); // Prevent middle-click auto-scroll
+               if (e.button === 1) e.preventDefault();
             }
          });
 
@@ -727,7 +730,7 @@
 
          // Right click for object selection menu (Tile coordinates)
          container.addEventListener("contextmenu", (e) => {
-            e.preventDefault(); // Prevent default browser context menu
+            e.preventDefault();
 
             // Translate screen coordinates to unscaled world coordinates
             const rect = container.getBoundingClientRect();
