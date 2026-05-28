@@ -540,9 +540,11 @@
          const paintedTileElements = [];
 
          const createPaintedTileElement = (tileData) => {
-            const el = document.createElement("img");
             const tType = tileTypes.find((t) => t.id === tileData.objectId);
-            if (tType) el.src = tType.image;
+            if (!tType || typeof tileData.mapX !== "number" || typeof tileData.mapY !== "number" || typeof tileData.tileX !== "number" || typeof tileData.tileY !== "number") return false;
+
+            const el = document.createElement("img");
+            el.src = tType.image;
             el.classList.add("placed-tile");
             el.classList.add(`tile-${tileData.objectId}`);
             el.classList.add(`map-${tileData.mapType || "ow"}`);
@@ -551,12 +553,15 @@
             el.draggable = false;
             container.appendChild(el);
             paintedTileElements.push({ data: tileData, el: el });
+            return true;
          };
 
          const createObjectElement = (objData) => {
-            const el = document.createElement("img");
             const objType = objectTypes.find((t) => t.id === objData.objectId);
-            if (objType) el.src = objType.image;
+            if (!objType || typeof objData.mapX !== "number" || typeof objData.mapY !== "number" || typeof objData.tileX !== "number" || typeof objData.tileY !== "number") return false;
+
+            const el = document.createElement("img");
+            el.src = objType.image;
             el.classList.add("placed-object");
             el.classList.add(`object-${objData.objectId}`);
             el.classList.add(`map-${objData.mapType || "ow"}`);
@@ -565,6 +570,7 @@
             el.draggable = false;
             container.appendChild(el);
             objectElements.push({ data: objData, el: el });
+            return true;
          };
 
          const removeObjectAt = (mapX, mapY, tileX, tileY, mapType) => {
@@ -773,8 +779,11 @@
          });
          objectMenu.appendChild(removeBtn);
 
-         placedObjects.forEach(createObjectElement);
-         paintedTiles.forEach(createPaintedTileElement);
+         placedObjects = placedObjects.filter(createObjectElement);
+         localStorage.setItem("placedObjects", JSON.stringify(placedObjects));
+
+         paintedTiles = paintedTiles.filter(createPaintedTileElement);
+         localStorage.setItem("paintedTiles", JSON.stringify(paintedTiles));
 
          // Hide object menu when clicking outside
          window.addEventListener("pointerdown", (e) => {
@@ -982,9 +991,10 @@
                            );
 
                            if (!conflict) {
-                              placedObjects.push(importedObj);
-                              createObjectElement(importedObj);
-                              objectsAdded = true;
+                              if (createObjectElement(importedObj)) {
+                                 placedObjects.push(importedObj);
+                                 objectsAdded = true;
+                              }
                            }
                         });
 
@@ -1039,9 +1049,10 @@
                            );
 
                            if (!conflict) {
-                              paintedTiles.push(importedTile);
-                              createPaintedTileElement(importedTile);
-                              tilesAdded = true;
+                              if (createPaintedTileElement(importedTile)) {
+                                 paintedTiles.push(importedTile);
+                                 tilesAdded = true;
+                              }
                            }
                         });
 
