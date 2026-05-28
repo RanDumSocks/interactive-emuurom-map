@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Interactive Emuurom Map</title>
+      <style>
+         :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --toolbar-bg: rgba(40, 40, 40, 0.9);
+            --border-subtle: rgba(255, 255, 255, 0.15);
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --btn-bg: transparent;
+            --btn-bg-hover: rgba(255, 255, 255, 0.1);
+            --btn-active-bg: rgba(255, 255, 255, 0.15);
+            --btn-active-border: rgba(255, 255, 255, 0.4);
+            --btn-active-text: #ffffff;
+            --btn-active-hover-bg: rgba(255, 255, 255, 0.25);
+            --grid-internal: rgba(255, 255, 255, 0.6);
+            --grid-outer: rgba(255, 87, 87, 0.8);
+            --grid-shadow: rgba(0, 0, 0, 0.3);
+            --label-color: rgba(255, 255, 255, 0.9);
+            --label-shadow: rgba(0, 0, 0, 0.8);
+            --hover-box-border: rgba(255, 255, 255, 0.8);
+            --hover-box-bg: rgba(255, 255, 255, 0.2);
+            --remove-btn-color: #ff5252;
+         }
+
+         body,
+         html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: sans-serif;
+         }
+
+         #torus-grid {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+         }
+
+         #top-toolbar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            user-select: none;
+         }
+
+         #toolbar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            user-select: none;
+         }
+
+         #map-toolbar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            user-select: none;
+         }
+
+         .tile-wrapper {
+            position: absolute;
+            box-sizing: border-box;
+            transform-origin: top left;
+         }
+
+         .tile-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            user-select: none;
+         }
+
+         .coord-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--label-color);
+            font-weight: bold;
+            font-size: 1.5em;
+            text-shadow: 1px 1px 3px var(--label-shadow);
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+         }
+
+         #torus-grid.hide-labels .coord-label {
+            opacity: 0;
+         }
+
+         .grid-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out;
+            filter: drop-shadow(0px 0px 2px var(--grid-shadow));
+         }
+
+         #torus-grid.hide-minor-grid {
+            --grid-internal: transparent;
+         }
+
+         #torus-grid.hide-major-grid {
+            --grid-outer: transparent;
+         }
+
+         .tool-btn {
+            background-color: var(--btn-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-color);
+            border-radius: 6px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition:
+               background-color 0.2s,
+               border-color 0.2s;
+            padding: 0;
+         }
+
+         .tool-btn:hover {
+            background-color: var(--btn-bg-hover);
+         }
+
+         .tool-btn.active {
+            background-color: var(--btn-active-bg);
+            border-color: var(--btn-active-border);
+            color: var(--btn-active-text);
+         }
+
+         .tool-btn.active:hover {
+            background-color: var(--btn-active-hover-bg);
+         }
+
+         .tool-btn img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
+         }
+
+         #object-menu {
+            position: absolute;
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+            gap: 10px;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+         }
+
+         .object-btn {
+            background-color: var(--btn-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            transition:
+               background-color 0.2s,
+               border-color 0.2s;
+         }
+
+         .object-btn:hover {
+            background-color: var(--btn-bg-hover);
+         }
+
+         .object-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            pointer-events: none;
+         }
+
+         #hover-box {
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+            border: 2px solid var(--hover-box-border);
+            background-color: var(--hover-box-bg);
+            backdrop-filter: invert(100%);
+            pointer-events: none;
+            display: none;
+            z-index: 50;
+            transform-origin: top left;
+         }
+
+         .placed-object {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 60;
+            image-rendering: pixelated;
+         }
+      </style>
+   </head>
+   <body>
+      <div id="torus-grid">
+         <div id="hover-box"></div>
+      </div>
+
+      <div id="top-toolbar"></div>
+
+      <div id="toolbar">
+         <button id="toggle-coords-btn" class="tool-btn active" title="Toggle Coordinates">&#128065;</button>
+         <button id="toggle-minor-btn" class="tool-btn active" title="Toggle Minor Grid">&#8862;</button>
+         <button id="toggle-major-btn" class="tool-btn active" title="Toggle Major Grid">&#9723;</button>
+      </div>
+
+      <div id="map-toolbar">
+         <button id="toggle-map-btn" class="tool-btn active" title="Toggle Map Version (OW/FC)">OW</button>
+      </div>
+
+      <div id="object-menu"></div>
+
+      <script>
+         const tileW = 1680 / 4;
+         const tileH = 950 / 4;
+         const cols = 8;
+         const rows = 8;
+         const totalW = tileW * cols;
+         const totalH = tileH * rows;
+         const subTileW = tileW / 30;
+         const subTileH = tileH / 17;
+         const iconSize = 32; // Configurable icon size in pixels
+
+         const container = document.getElementById("torus-grid");
+         const objectMenu = document.getElementById("object-menu");
+         const hoverBox = document.getElementById("hover-box");
+         const topToolbar = document.getElementById("top-toolbar");
+
+         const objectTypes = [
+            { id: "salavia", name: "Salavia", image: "images/objects/salavia.png" }
+         ];
+
+         let placedObjects = JSON.parse(localStorage.getItem("placedObjects")) || [];
+         const objectElements = [];
+
+         const createObjectElement = (objData) => {
+            const el = document.createElement("img");
+            const objType = objectTypes.find((t) => t.id === objData.objectId);
+            if (objType) el.src = objType.image;
+            el.classList.add("placed-object");
+            el.classList.add(`object-${objData.objectId}`);
+            el.style.width = `${iconSize}px`;
+            el.style.height = `${iconSize}px`;
+            container.appendChild(el);
+            objectElements.push({ data: objData, el: el });
+         };
+
+         const removeObjectAt = (mapX, mapY, tileX, tileY) => {
+            placedObjects = placedObjects.filter((o) => {
+               if (o.mapX === mapX && o.mapY === mapY && o.tileX === tileX && o.tileY === tileY) {
+                  const objElIndex = objectElements.findIndex((oe) => oe.data === o);
+                  if (objElIndex !== -1) {
+                     const elToRemove = objectElements[objElIndex].el;
+                     if (elToRemove.parentNode) elToRemove.parentNode.removeChild(elToRemove);
+                     objectElements.splice(objElIndex, 1);
+                  }
+                  return false; // Remove from placedObjects
+               }
+               return true; // Keep in placedObjects
+            });
+         };
+
+         let currentClickLocation = null;
+         let mouseX = 0, mouseY = 0;
+         let isPointerOver = false;
+
+         // Dynamic styles for toggling object visibility
+         const dynamicStyles = document.createElement("style");
+         document.head.appendChild(dynamicStyles);
+
+         // Build visibility toggle toolbar dynamically
+         objectTypes.forEach((obj) => {
+            dynamicStyles.innerHTML += `#torus-grid.hide-${obj.id} .object-${obj.id} { display: none; }\n`;
+
+            const btn = document.createElement("button");
+            btn.classList.add("tool-btn", "active");
+            btn.title = `Toggle ${obj.name}`;
+
+            const img = document.createElement("img");
+            img.src = obj.image;
+            img.alt = obj.name;
+
+            btn.appendChild(img);
+
+            btn.addEventListener("click", () => {
+               btn.classList.toggle("active");
+               container.classList.toggle(`hide-${obj.id}`);
+            });
+
+            topToolbar.appendChild(btn);
+         });
+
+         // Build object selection menu
+         objectTypes.forEach((obj) => {
+            const btn = document.createElement("button");
+            btn.classList.add("object-btn");
+            btn.title = obj.name;
+
+            const img = document.createElement("img");
+            img.src = obj.image;
+            img.alt = obj.name;
+
+            btn.appendChild(img);
+
+            btn.addEventListener("click", () => {
+               if (currentClickLocation) {
+                  const { mapX, mapY, tileX, tileY } = currentClickLocation;
+
+                  // Override existing object(s) at this location
+                  removeObjectAt(mapX, mapY, tileX, tileY);
+
+                  const newObj = {
+                     mapX,
+                     mapY,
+                     tileX,
+                     tileY,
+                     objectId: obj.id
+                  };
+                  placedObjects.push(newObj);
+                  localStorage.setItem("placedObjects", JSON.stringify(placedObjects));
+                  createObjectElement(newObj);
+               }
+               objectMenu.style.display = "none";
+            });
+
+            objectMenu.appendChild(btn);
+         });
+
+         // Build remove object button
+         const removeBtn = document.createElement("button");
+         removeBtn.classList.add("object-btn");
+         removeBtn.title = "Remove Object";
+         removeBtn.innerHTML = '<span style="color: var(--remove-btn-color); font-weight: bold; font-size: 24px; pointer-events: none;">&#10006;</span>';
+         removeBtn.style.display = "none";
+
+         removeBtn.addEventListener("click", () => {
+            if (currentClickLocation) {
+               const { mapX, mapY, tileX, tileY } = currentClickLocation;
+               removeObjectAt(mapX, mapY, tileX, tileY);
+               localStorage.setItem("placedObjects", JSON.stringify(placedObjects));
+            }
+            objectMenu.style.display = "none";
+         });
+         objectMenu.appendChild(removeBtn);
+
+         // Initialize already placed objects
+         placedObjects.forEach(createObjectElement);
+
+         // Hide object menu when clicking outside
+         window.addEventListener("pointerdown", (e) => {
+            if (objectMenu.style.display !== "none" && !objectMenu.contains(e.target) && e.button !== 2) {
+               objectMenu.style.display = "none";
+            }
+         });
+
+         // Calculate minimum scale to ensure the grid always covers the screen + 1 extra wrapping tile
+         const getMinScale = () => {
+            const rect = container.getBoundingClientRect();
+            const minScaleX = rect.width / (totalW - tileW);
+            const minScaleY = rect.height / (totalH - tileH);
+            return Math.max(minScaleX, minScaleY);
+         };
+
+         let currentPanX = 0,
+            currentPanY = 0,
+            currentScale = Math.max(1.0, getMinScale());
+         let targetPanX = 0,
+            targetPanY = 0,
+            targetScale = currentScale;
+         const friction = 0.15;
+
+         let isDragging = false;
+         let startX, startY;
+         const tiles = [];
+         let currentMap = "ow";
+
+         // 8x8 grid
+         for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+               const wrapper = document.createElement("div");
+               wrapper.classList.add("tile-wrapper");
+               wrapper.style.width = `${tileW}px`;
+               wrapper.style.height = `${tileH}px`;
+
+               const img = document.createElement("img");
+
+               img.src = `images/${currentMap}/${currentMap}_${r + 1}-${c + 1}.png`;
+               img.classList.add("tile-image");
+               img.draggable = false;
+
+               wrapper.appendChild(img);
+
+               // Map overlay / grid lines
+               const borderOverlay = document.createElement("div");
+               borderOverlay.classList.add("grid-overlay");
+
+               const internalEdge = "2px dashed var(--grid-internal)";
+               const outerEdge = "3px solid var(--grid-outer)";
+
+               borderOverlay.style.borderRight = internalEdge;
+               borderOverlay.style.borderBottom = internalEdge;
+
+               if (r === 0) borderOverlay.style.borderTop = outerEdge;
+               if (c === 0) borderOverlay.style.borderLeft = outerEdge;
+
+               wrapper.appendChild(borderOverlay);
+
+               // Label in the center of the grid
+               const label = document.createElement("div");
+               label.innerText = `${r + 1}-${c + 1}`;
+               label.classList.add("coord-label");
+               wrapper.appendChild(label);
+
+               container.appendChild(wrapper);
+               tiles.push({ el: wrapper, img: img, c, r });
+            }
+         }
+
+         // Toolbar Options Logic
+         const toggleCoordsBtn = document.getElementById("toggle-coords-btn");
+         toggleCoordsBtn.addEventListener("click", () => {
+            toggleCoordsBtn.classList.toggle("active");
+            if (toggleCoordsBtn.classList.contains("active")) {
+               container.classList.remove("hide-labels");
+            } else {
+               container.classList.add("hide-labels");
+            }
+         });
+
+         const toggleMinorBtn = document.getElementById("toggle-minor-btn");
+         toggleMinorBtn.addEventListener("click", () => {
+            toggleMinorBtn.classList.toggle("active");
+            if (toggleMinorBtn.classList.contains("active")) {
+               container.classList.remove("hide-minor-grid");
+            } else {
+               container.classList.add("hide-minor-grid");
+            }
+         });
+
+         const toggleMajorBtn = document.getElementById("toggle-major-btn");
+         toggleMajorBtn.addEventListener("click", () => {
+            toggleMajorBtn.classList.toggle("active");
+            if (toggleMajorBtn.classList.contains("active")) {
+               container.classList.remove("hide-major-grid");
+            } else {
+               container.classList.add("hide-major-grid");
+            }
+         });
+
+         const toggleMapBtn = document.getElementById("toggle-map-btn");
+         toggleMapBtn.addEventListener("click", () => {
+            currentMap = currentMap === "ow" ? "fc" : "ow";
+            toggleMapBtn.innerText = currentMap.toUpperCase();
+            tiles.forEach((tile) => {
+               tile.img.src = `images/${currentMap}/${currentMap}_${tile.r + 1}-${tile.c + 1}.png`;
+            });
+         });
+
+         const updatePositions = () => {
+            const scaledTotalW = totalW * currentScale;
+            const scaledTotalH = totalH * currentScale;
+            const scaledTileW = tileW * currentScale;
+            const scaledTileH = tileH * currentScale;
+
+            tiles.forEach((tile) => {
+               let x = (((tile.c * scaledTileW + currentPanX) % scaledTotalW) + scaledTotalW) % scaledTotalW;
+               let y = (((tile.r * scaledTileH + currentPanY) % scaledTotalH) + scaledTotalH) % scaledTotalH;
+
+               if (x > scaledTotalW - scaledTileW) x -= scaledTotalW;
+               if (y > scaledTotalH - scaledTileH) y -= scaledTotalH;
+
+               tile.el.style.transform = `translate(${x}px, ${y}px) scale(${currentScale})`;
+               tile.currentX = x;
+               tile.currentY = y;
+            });
+         };
+
+         const getWorldToGridCoords = (worldX, worldY) => {
+            const wrappedWorldX = ((worldX % totalW) + totalW) % totalW;
+            const wrappedWorldY = ((worldY % totalH) + totalH) % totalH;
+
+            const mapC = Math.floor(wrappedWorldX / tileW);
+            const mapR = Math.floor(wrappedWorldY / tileH);
+            const localX = wrappedWorldX % tileW;
+            const localY = wrappedWorldY % tileH;
+
+            const tileC = Math.floor(localX / subTileW);
+            const tileR = Math.floor(localY / subTileH);
+            
+            return { mapC, mapR, mapX: mapC + 1, mapY: mapR + 1, tileC, tileR, tileX: tileC, tileY: tileR };
+         };
+
+         const updateHoverBox = () => {
+            if (isPointerOver && !isDragging) {
+               const worldX = (mouseX - currentPanX) / currentScale;
+               const worldY = (mouseY - currentPanY) / currentScale;
+
+               const { mapC, mapR, tileC, tileR } = getWorldToGridCoords(worldX, worldY);
+
+               const parentTile = tiles.find((t) => t.c === mapC && t.r === mapR);
+               if (parentTile && parentTile.currentX !== undefined) {
+                  const hoverScreenX = parentTile.currentX + tileC * subTileW * currentScale;
+                  const hoverScreenY = parentTile.currentY + tileR * subTileH * currentScale;
+
+                  hoverBox.style.display = "block";
+                  hoverBox.style.width = `${subTileW * currentScale}px`;
+                  hoverBox.style.height = `${subTileH * currentScale}px`;
+                  hoverBox.style.transform = `translate(${hoverScreenX}px, ${hoverScreenY}px)`;
+               }
+            } else {
+               hoverBox.style.display = "none";
+            }
+         };
+
+         const updatePlacedObjects = () => {
+            objectElements.forEach((obj) => {
+               const parentTile = tiles.find((t) => t.c === obj.data.mapX - 1 && t.r === obj.data.mapY - 1);
+               if (parentTile && parentTile.currentX !== undefined) {
+                  // Center the icon exactly in the middle of the scaled tile
+                  const localCenterX = (obj.data.tileX * subTileW + subTileW / 2) * currentScale;
+                  const localCenterY = (obj.data.tileY * subTileH + subTileH / 2) * currentScale;
+                  const screenX = parentTile.currentX + localCenterX - iconSize / 2;
+                  const screenY = parentTile.currentY + localCenterY - iconSize / 2;
+
+                  obj.el.style.transform = `translate(${screenX}px, ${screenY}px)`;
+               }
+            });
+         };
+
+         // Apply initial layout so tiles aren't stacked in the top-left corner
+         updatePositions();
+
+         // Adjust min zoom dynamically if the window is resized
+         window.addEventListener("resize", () => {
+            const minScale = getMinScale();
+            if (targetScale < minScale) {
+               const centerX = window.innerWidth / 2;
+               const centerY = window.innerHeight / 2;
+               const actualZoom = minScale / targetScale;
+               targetPanX = centerX - (centerX - targetPanX) * actualZoom;
+               targetPanY = centerY - (centerY - targetPanY) * actualZoom;
+               targetScale = minScale;
+            }
+         });
+
+         const renderLoop = () => {
+            currentPanX += (targetPanX - currentPanX) * friction;
+            currentPanY += (targetPanY - currentPanY) * friction;
+            currentScale += (targetScale - currentScale) * friction;
+
+            const diff =
+               Math.abs(targetPanX - currentPanX) +
+               Math.abs(targetPanY - currentPanY) +
+               Math.abs(targetScale - currentScale);
+            if (diff > 0.005 || isDragging) {
+               updatePositions();
+            }
+            updateHoverBox();
+            updatePlacedObjects();
+
+            requestAnimationFrame(renderLoop);
+         };
+
+         renderLoop();
+
+         // Mouse / Pointer Dragging Logic
+         container.addEventListener("pointerdown", (e) => {
+            // Pan on left click (0), middle mouse button (1), or touch
+            if (e.button === 0 || e.button === 1 || e.pointerType === "touch") {
+               isDragging = true;
+               startX = e.clientX;
+               startY = e.clientY;
+               if (e.button === 1) e.preventDefault(); // Prevent middle-click auto-scroll
+            }
+         });
+
+         const stopDrag = () => {
+            isDragging = false;
+         };
+
+         window.addEventListener("pointerup", stopDrag);
+         container.addEventListener("pointerleave", (e) => {
+            isPointerOver = false;
+            stopDrag();
+         });
+
+         container.addEventListener("pointerenter", () => {
+            isPointerOver = true;
+         });
+
+         container.addEventListener("pointermove", (e) => {
+            const rect = container.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+            isPointerOver = true;
+
+            if (!isDragging) return;
+            e.preventDefault();
+
+            targetPanX += e.clientX - startX;
+            targetPanY += e.clientY - startY;
+
+            startX = e.clientX;
+            startY = e.clientY;
+         });
+
+         // Right click for object selection menu (Tile coordinates)
+         container.addEventListener("contextmenu", (e) => {
+            e.preventDefault(); // Prevent default browser context menu
+
+            // Translate screen coordinates to unscaled world coordinates
+            const rect = container.getBoundingClientRect();
+            const worldX = (e.clientX - rect.left - currentPanX) / currentScale;
+            const worldY = (e.clientY - rect.top - currentPanY) / currentScale;
+
+            const { mapX, mapY, tileX, tileY } = getWorldToGridCoords(worldX, worldY);
+
+            console.log(`Map Clicked -> mapX: ${mapX}, mapY: ${mapY}, tileX: ${tileX}, tileY: ${tileY}`);
+            currentClickLocation = { mapX, mapY, tileX, tileY };
+
+            const hasExistingObject = placedObjects.some(
+               (o) => o.mapX === mapX && o.mapY === mapY && o.tileX === tileX && o.tileY === tileY
+            );
+            removeBtn.style.display = hasExistingObject ? "flex" : "none";
+
+            objectMenu.style.display = "flex";
+            objectMenu.style.left = `${e.clientX}px`;
+            objectMenu.style.top = `${e.clientY + 10}px`;
+         });
+
+         // Mouse Wheel Zoom / Panning Logic
+         container.addEventListener(
+            "wheel",
+            (e) => {
+               e.preventDefault();
+
+               if (e.ctrlKey || e.metaKey) {
+                  const rect = container.getBoundingClientRect();
+                  const localMouseX = e.clientX - rect.left;
+                  const localMouseY = e.clientY - rect.top;
+
+                  const zoomFactor = Math.exp(-e.deltaY * 0.002);
+                  const minScale = getMinScale();
+                  const newTargetScale = Math.min(
+                     Math.max(targetScale * zoomFactor, minScale),
+                     Math.max(3.0, minScale),
+                  );
+                  const actualZoom = newTargetScale / targetScale;
+
+                  targetPanX = localMouseX - (localMouseX - targetPanX) * actualZoom;
+                  targetPanY = localMouseY - (localMouseY - targetPanY) * actualZoom;
+                  targetScale = newTargetScale;
+               } else {
+                  if (e.shiftKey && e.deltaX === 0) {
+                     targetPanX -= e.deltaY;
+                  } else {
+                     targetPanX -= e.deltaX;
+                     targetPanY -= e.deltaY;
+                  }
+               }
+            },
+            { passive: false },
+         );
+      </script>
+   </body>
+</html>
