@@ -9,11 +9,13 @@ if ([System.Windows.Forms.Clipboard]::ContainsImage()) {
    
    # Define the crop region to remove UI elements/borders from the 1920x1080 screenshot
    $cropX = 120
-   $cropY = 65
-   $targetWidth = 1680
-   $targetHeight = 950
+   $cropY = 64
+   $cropWidth = 1680
+   $cropHeight = 952
+   $targetWidth = 240
+   $targetHeight = 136
 
-   $srcRect = New-Object System.Drawing.Rectangle($cropX, $cropY, $targetWidth, $targetHeight)
+   $srcRect = New-Object System.Drawing.Rectangle($cropX, $cropY, $cropWidth, $cropHeight)
 
    $destRect = New-Object System.Drawing.Rectangle(0, 0, $targetWidth, $targetHeight)
    
@@ -21,9 +23,9 @@ if ([System.Windows.Forms.Clipboard]::ContainsImage()) {
    
    $graphics = [System.Drawing.Graphics]::FromImage($bmp)
    
-   $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-   $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
-   $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+   $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+   $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::None
+   $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
    
    $graphics.DrawImage($srcImg, $destRect, $srcRect, [System.Drawing.GraphicsUnit]::Pixel)
    

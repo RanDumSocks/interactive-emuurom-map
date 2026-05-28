@@ -221,6 +221,7 @@
             height: 100%;
             object-fit: cover;
             user-select: none;
+            image-rendering: pixelated;
          }
 
          .coord-label {
@@ -498,8 +499,8 @@
 
       <script>
          // Base map dimensions and grid configurations
-         const tileW = 1680 / 4;
-         const tileH = 950 / 4;
+         const tileW = 240 * 2;
+         const tileH = 136 * 2;
          const cols = 8;
          const rows = 8;
          const totalW = tileW * cols;
