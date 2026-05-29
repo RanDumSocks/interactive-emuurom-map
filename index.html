@@ -438,6 +438,26 @@
             z-index: 100;
             user-select: none;
          }
+
+         #version-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            height: 44px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            color: var(--text-color);
+            font-size: 0.9em;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            user-select: none;
+         }
       </style>
    </head>
    <body>
@@ -452,6 +472,8 @@
       </a>
 
       <div id="copyright-info">&copy; Justin Chance | AGPLv3</div>
+
+      <div id="version-info">v<span id="build-number"></span></div>
 
       <div id="top-toolbar-container">
          <div id="top-toolbar" class="toolbar-panel"></div>
@@ -497,6 +519,7 @@
          <div id="tile-selection-menu"></div>
       </div>
 
+      <script src="./constants.js"></script>
       <script>
          // Base map dimensions and grid configurations
          const tileW = 240 * 2;
@@ -521,6 +544,12 @@
          const panBtn = document.getElementById("pan-btn");
          const pencilBtn = document.getElementById("pencil-btn");
          const eraseBtn = document.getElementById("erase-btn");
+
+         if (typeof MAJOR_NUMBER !== 'undefined' && typeof MINOR_NUMBER !== 'undefined' && typeof BUILD_NUMBER !== 'undefined') {
+            document.getElementById("build-number").innerText = `${MAJOR_NUMBER}.${MINOR_NUMBER}.${BUILD_NUMBER}`;
+         } else {
+            document.getElementById("version-info").style.display = 'none';
+         }
 
          const objectTypes = [
             { id: "salavia", name: "Salavia", image: "images/objects/salavia.png" },
