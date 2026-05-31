@@ -419,24 +419,80 @@
             fill: currentColor;
          }
 
-         #copyright-info {
+         #info-btn {
             position: absolute;
             top: 20px;
             left: 74px;
             background-color: var(--toolbar-bg);
             border: 1px solid var(--border-subtle);
             border-radius: 8px;
+            width: 44px;
             height: 44px;
-            box-sizing: border-box;
             display: flex;
             align-items: center;
-            padding: 0 15px;
+            justify-content: center;
             color: var(--text-color);
-            font-size: 0.9em;
+            cursor: pointer;
             box-shadow: 0 4px 6px var(--shadow-color);
             backdrop-filter: blur(4px);
             z-index: 100;
-            user-select: none;
+            transition: background-color 0.2s, border-color 0.2s;
+            padding: 0;
+         }
+
+         #info-btn:hover {
+            background-color: var(--btn-bg-hover);
+         }
+
+         #info-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+         }
+
+         #info-panel {
+            position: absolute;
+            top: 74px;
+            left: 20px;
+            width: 320px;
+            background-color: var(--toolbar-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            box-sizing: border-box;
+            padding: 15px;
+            color: var(--text-color);
+            box-shadow: 0 4px 6px var(--shadow-color);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            opacity: 0;
+            transform: translateX(-20px);
+            pointer-events: none;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+         }
+
+         #info-panel.show {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+         }
+
+         #info-panel h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 5px;
+         }
+
+         #info-panel p {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            line-height: 1.4;
+         }
+
+         #info-panel p:last-child {
+            margin-bottom: 0;
          }
 
          #version-info {
@@ -471,7 +527,25 @@
          </svg>
       </a>
 
-      <div id="copyright-info">&copy; Justin Chance | AGPLv3</div>
+         <button id="info-btn" title="Information">
+            <svg viewBox="0 0 24 24">
+               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"></path>
+            </svg>
+         </button>
+
+         <div id="info-panel">
+            <h3>About</h3>
+            <p>This is a world map for <a href="https://www.emuurom.com/">Emuurom</a>.</p>
+            <h3>Contributors</h3>
+            <p>Thank you to everyone who has helped on this project, it's been such a joy to be involved with this community and cannot express my gratitude enough for everyone involved.</p>
+            <p>Below are thjose who really made this possible for giving me the motivation and helping obtain assets and feedback:</p>
+            <p>Goggles_Dreaming</p>
+            <p>MH_25</p>
+            <p>StellasFun</p>
+            <p>And everyone in the disborb Discord community. Thank you &lt;3</p>
+            <h3>Copyright</h3>
+            <p>&copy; Justin Chance | AGPLv3</p>
+         </div>
 
       <div id="version-info">v<span id="build-number"></span></div>
 
@@ -544,6 +618,8 @@
          const panBtn = document.getElementById("pan-btn");
          const pencilBtn = document.getElementById("pencil-btn");
          const eraseBtn = document.getElementById("erase-btn");
+         const infoBtn = document.getElementById("info-btn");
+         const infoPanel = document.getElementById("info-panel");
 
          if (typeof MAJOR_NUMBER !== 'undefined' && typeof MINOR_NUMBER !== 'undefined' && typeof BUILD_NUMBER !== 'undefined') {
             document.getElementById("build-number").innerText = `${MAJOR_NUMBER}.${MINOR_NUMBER}.${BUILD_NUMBER}`;
@@ -819,6 +895,10 @@
          paintedTiles = paintedTiles.filter(createPaintedTileElement);
          localStorage.setItem("paintedTiles", JSON.stringify(paintedTiles));
 
+         infoBtn.addEventListener("click", () => {
+            infoPanel.classList.toggle("show");
+         });
+
          // Hide object menu when clicking outside
          window.addEventListener("pointerdown", (e) => {
             if (objectMenu.style.display !== "none" && !objectMenu.contains(e.target) && e.button !== 2) {
@@ -826,6 +906,9 @@
             }
             if (tileSelectionMenu.classList.contains("show") && !tileSelectionMenu.contains(e.target) && !tileSelectBtn.contains(e.target)) {
                tileSelectionMenu.classList.remove("show");
+            }
+            if (infoPanel.classList.contains("show") && !infoPanel.contains(e.target) && !infoBtn.contains(e.target)) {
+               infoPanel.classList.remove("show");
             }
          });
 
